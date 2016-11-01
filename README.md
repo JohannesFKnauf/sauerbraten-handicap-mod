@@ -13,6 +13,10 @@ In order to play the mod, you have to compile sauerbraten from source.
     make
     make install
 
+### Prerequisites in Ubuntu 15.10
+
+    sudo aptitude install libsdl1.2-dev libsdl-image1.2-dev libsdl-mixer1.2-dev
+
 ## Windows
 
 * Download http://downloads.sourceforge.net/project/sauerbraten/sauerbraten/2013_01_04/sauerbraten_2013_02_03_collect_edition_windows.exe

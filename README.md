@@ -1,5 +1,5 @@
 # sauerbraten-handicap-mod
-A Mod for Cube2 Sauerbraten to improve gameplay for heterogenous parties using an autobalancing handicap.
+A Mod for Cube2 Sauerbraten Collect Edition to improve gameplay for heterogenous parties using an autobalancing handicap.
 
 # Build and Run plain Sauerbraten
 In order to play the mod, you have to compile sauerbraten from source.

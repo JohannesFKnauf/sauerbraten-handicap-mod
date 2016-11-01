@@ -1,0 +1,386 @@
+diff -rupN sauerbraten/data/game_fps.cfg sauerbraten_cip/data/game_fps.cfg
+--- sauerbraten/data/game_fps.cfg	2012-01-07 20:29:16.000000000 +0100
++++ sauerbraten_cip/data/game_fps.cfg	2013-12-23 20:25:09.877885035 +0100
+@@ -6,7 +6,7 @@ sayteamcommand = [inputcommand (if (>= $
+ mapcomplete = [ complete $arg1 packages/base ogz ]
+ mapcomplete map
+ 
+-modenames = "ffa coop teamplay insta instateam effic efficteam tac tacteam capture regencapture ctf instactf protect instaprotect hold instahold efficctf efficprotect effichold collect instacollect efficcollect"
++modenames = "ffa handicap coop teamplay insta instateam effic efficteam tac tacteam capture regencapture ctf instactf protect instaprotect hold instahold efficctf efficprotect effichold collect instacollect efficcollect"  // HandicapMode --jr
+ loop i (listlen $modenames) [
+     mname = (at $modenames $i)
+     alias $mname [ if (mode @i) [if (> $numargs 0) [map $arg1] [map]] ]
+diff -rupN sauerbraten/data/menus.cfg sauerbraten_cip/data/menus.cfg
+--- sauerbraten/data/menus.cfg	2013-01-11 12:12:24.000000000 +0100
++++ sauerbraten_cip/data/menus.cfg	2013-12-23 20:29:44.806873786 +0100
+@@ -22,6 +22,7 @@ newgui main [
+     ]
+     guibar
+     guibutton "server browser.."  "showgui servers"
++    guibutton "lanconnect" // HandicapMode --jr
+     if (isconnected) [
+         guibar
+         if (|| $editing (m_edit (getmode))) [
+@@ -361,33 +362,35 @@ newgui servers [
+ 
+ newgui gamemode [
+     guilist [
++    // mode numbers all shifted by 1 HandicapMode --jr
+         guilist [
+             guibutton "ffa"                "mode 0; showgui maps"
+-            guibutton "coop-edit"          "mode 1; showgui maps"
+-            guibutton "teamplay"           "mode 2; showgui maps"
+-            guibutton "instagib"           "mode 3; showgui maps"
+-            guibutton "instagib team"      "mode 4; showgui maps"
+-            guibutton "efficiency"         "mode 5; showgui maps"
+-            guibutton "efficiency team"    "mode 6; showgui maps"
+-            guibutton "tactics"            "mode 7; showgui maps"
+-            guibutton "tactics team"       "mode 8; showgui maps"
+-            guibutton "capture"            "mode 9; showgui capturemaps"
+-            guibutton "regen capture"      "mode 10; showgui capturemaps"
++            guibutton "handicap"           "mode 1; showgui maps" // HandicapMode --jr
++            guibutton "coop-edit"          "mode 2; showgui maps"
++            guibutton "teamplay"           "mode 3; showgui maps"
++            guibutton "instagib"           "mode 4; showgui maps"
++            guibutton "instagib team"      "mode 5; showgui maps"
++            guibutton "efficiency"         "mode 6; showgui maps"
++            guibutton "efficiency team"    "mode 7; showgui maps"
++            guibutton "tactics"            "mode 8; showgui maps"
++            guibutton "tactics team"       "mode 9; showgui maps"
++            guibutton "capture"            "mode 10; showgui capturemaps"
++            guibutton "regen capture"      "mode 11; showgui capturemaps"
+         ]
+         guibar
+         guilist [
+-            guibutton "ctf"                "mode 11; showgui ctfmaps"
+-            guibutton "insta ctf"          "mode 12; showgui ctfmaps"
+-            guibutton "efficiency ctf"     "mode 17; showgui ctfmaps"
+-            guibutton "protect"            "mode 13; showgui ctfmaps"
+-            guibutton "insta protect"      "mode 14; showgui ctfmaps"
+-            guibutton "efficiency protect" "mode 18; showgui ctfmaps"
+-            guibutton "hold"               "mode 15; showgui capturemaps"
+-            guibutton "insta hold"         "mode 16; showgui capturemaps"
+-            guibutton "efficiency hold"    "mode 19; showgui capturemaps"
+-            guibutton "collect"            "mode 20; showgui ctfmaps"
+-            guibutton "insta collect"      "mode 21; showgui ctfmaps"
+-            guibutton "efficiency collect" "mode 22; showgui ctfmaps"
++            guibutton "ctf"                "mode 12; showgui ctfmaps"
++            guibutton "insta ctf"          "mode 13; showgui ctfmaps"
++            guibutton "efficiency ctf"     "mode 18; showgui ctfmaps"
++            guibutton "protect"            "mode 14; showgui ctfmaps"
++            guibutton "insta protect"      "mode 15; showgui ctfmaps"
++            guibutton "efficiency protect" "mode 19; showgui ctfmaps"
++            guibutton "hold"               "mode 16; showgui capturemaps"
++            guibutton "insta hold"         "mode 17; showgui capturemaps"
++            guibutton "efficiency hold"    "mode 20; showgui capturemaps"
++            guibutton "collect"            "mode 21; showgui ctfmaps"
++            guibutton "insta collect"      "mode 22; showgui ctfmaps"
++            guibutton "efficiency collect" "mode 23; showgui ctfmaps"
+         ]
+     ]
+ ]
+diff -rupN sauerbraten/src/fpsgame/client.cpp sauerbraten_cip/src/fpsgame/client.cpp
+--- sauerbraten/src/fpsgame/client.cpp	2013-01-14 19:56:56.000000000 +0100
++++ sauerbraten_cip/src/fpsgame/client.cpp	2013-12-23 20:33:24.631864791 +0100
+@@ -537,6 +537,7 @@ namespace game
+     ICOMMANDS("m_demo", "i", (int *mode), { int gamemode = *mode; intret(m_demo); });
+     ICOMMANDS("m_edit", "i", (int *mode), { int gamemode = *mode; intret(m_edit); });
+     ICOMMANDS("m_lobby", "i", (int *mode), { int gamemode = *mode; intret(m_lobby); });
++    ICOMMANDS("m_handicap", "i", (int *mode), { int gamemode = *mode; intret(m_handicap); }); // HandicapMode --jr
+     ICOMMANDS("m_sp", "i", (int *mode), { int gamemode = *mode; intret(m_sp); });
+     ICOMMANDS("m_dmsp", "i", (int *mode), { int gamemode = *mode; intret(m_dmsp); });
+     ICOMMANDS("m_classicsp", "i", (int *mode), { int gamemode = *mode; intret(m_classicsp); });
+@@ -1454,10 +1455,20 @@ namespace game
+             case N_DIED:
+             {
+                 int vcn = getint(p), acn = getint(p), frags = getint(p), tfrags = getint(p);
++		int vcn = getint(p), acn = getint(p), frags = getint(p), tfrags = getint(p), handicap_v = getint(p), handicap_a = getint(p); // HandicapMode --jr
+                 fpsent *victim = getclient(vcn),
+                        *actor = getclient(acn);
+                 if(!actor) break;
+                 actor->frags = frags;
++		// BEGIN HandicapMode --jr
++		int handicap_before = actor->handicap;
++		actor->handicap = handicap_a;
++		if (actor->handicap < handicap_before)
++		  {
++		    actor->health = actor->health * actor->handicap / handicap_before;
++		    actor->armour = actor->armour * actor->handicap / handicap_before;
++		  }
++		// END HandicapMode --jr
+                 if(m_teammode) setteaminfo(actor->team, tfrags);
+                 if(actor!=player1 && (!cmode || !cmode->hidefrags()))
+                 {
+@@ -1465,6 +1476,7 @@ namespace game
+                     particle_textcopy(actor->abovehead(), ds, PART_TEXT, 2000, 0x32FF64, 4.0f, -8);
+                 }
+                 if(!victim) break;
++		victim->handicap = handicap_v; // HandicapMode --jr
+                 killed(victim, actor);
+                 break;
+             }
+diff -rupN sauerbraten/src/fpsgame/fps.cpp sauerbraten_cip/src/fpsgame/fps.cpp
+--- sauerbraten/src/fpsgame/fps.cpp	2013-01-11 17:20:21.000000000 +0100
++++ sauerbraten_cip/src/fpsgame/fps.cpp	2013-12-23 20:36:15.753857789 +0100
+@@ -429,8 +429,8 @@ namespace game
+         }
+         else
+         {
+-            if(d==player1) conoutf(contype, "\f2%s got fragged by %s", dname, aname);
+-            else conoutf(contype, "\f2%s fragged %s", aname, dname);
++	    if(d==player1) conoutf(contype, "\f2%s got fragged by %s with %s", dname, aname, guns[actor->gunselect].name); // HandicapMode --jr
++	    else conoutf(contype, "\f2%s fragged %s with %s", aname, dname, guns[actor->gunselect].name); // HandicapMode --jr
+         }
+         deathstate(d);
+ 		ai::killed(d, actor);
+diff -rupN sauerbraten/src/fpsgame/game.h sauerbraten_cip/src/fpsgame/game.h
+--- sauerbraten/src/fpsgame/game.h	2013-01-11 12:34:27.000000000 +0100
++++ sauerbraten_cip/src/fpsgame/game.h	2013-12-23 20:48:40.965827296 +0100
+@@ -90,7 +90,8 @@ enum
+     M_DMSP       = 1<<16,
+     M_CLASSICSP  = 1<<17,
+     M_SLOWMO     = 1<<18,
+-    M_COLLECT    = 1<<19
++    M_COLLECT    = 1<<19,
++    M_HANDICAP   = 1<<20 // HandicapMode --jr
+ };
+ 
+ static struct gamemodeinfo
+@@ -104,6 +105,7 @@ static struct gamemodeinfo
+     { "DMSP", M_LOCAL | M_DMSP, NULL },
+     { "demo", M_DEMO | M_LOCAL, NULL},
+     { "ffa", M_LOBBY, "Free For All: Collect items for ammo. Frag everyone to score points." },
++    { "handicap", M_HANDICAP, "Handicap: Frag everyone to increase your handicap. Handicap corresponds to frag differences between players. Health, armor, damage are reduced by current handicap." }, // HandicapMode --jr
+     { "coop edit", M_EDIT, "Cooperative Editing: Edit maps with multiple players simultaneously." },
+     { "teamplay", M_TEAM, "Teamplay: Collect items for ammo. Frag \fs\f3the enemy team\fr to score points for \fs\f1your team\fr." },
+     { "instagib", M_NOITEMS | M_INSTA, "Instagib: You spawn with full rifle ammo and die instantly from one shot. There are no items. Frag everyone to score points." },
+@@ -138,6 +140,7 @@ static struct gamemodeinfo
+ 
+ #define m_noitems      (m_check(gamemode, M_NOITEMS))
+ #define m_noammo       (m_check(gamemode, M_NOAMMO|M_NOITEMS))
++#define m_handicap     (m_check(gamemode, M_HANDICAP)) // HandicapMode --jr
+ #define m_insta        (m_check(gamemode, M_INSTA))
+ #define m_tactics      (m_check(gamemode, M_TACTICS))
+ #define m_efficiency   (m_check(gamemode, M_EFFICIENCY))
+@@ -279,7 +282,7 @@ static const int msgsizes[] =
+ #define SAUERBRATEN_SERVER_PORT 28785
+ #define SAUERBRATEN_SERVINFO_PORT 28786
+ #define SAUERBRATEN_MASTER_PORT 28787
+-#define PROTOCOL_VERSION 259            // bump when protocol changes
++#define PROTOCOL_VERSION 532            // bump when protocol changes // HandicapMode --jr, symbolic high value to force incompatibility
+ #define DEMO_VERSION 1                  // bump when demo format changes
+ #define DEMO_MAGIC "SAUERBRATEN_DEMO"
+ 
+@@ -346,12 +349,12 @@ static struct itemstat { int add, max, s
+ 
+ static const struct guninfo { int sound, attackdelay, damage, spread, projspeed, kickamount, range, rays, hitpush, exprad, ttl; const char *name, *file; short part; } guns[NUMGUNS] =
+ {
+-    { S_PUNCH1,    250,  50,   0,   0,  0,   14,  1,  80,  0,    0, "fist",            "fist",   0 },
++    { S_PUNCH1,    250, 100,   0,   0,  0,   14,  1,  80,  0,    0, "fist",            "fist",   0 }, // Fist Damage Tuning --jr
+     { S_SG,       1400,  10, 400,   0, 20, 1024, 20,  80,  0,    0, "shotgun",         "shotg",  0 },
+     { S_CG,        100,  30, 100,   0,  7, 1024,  1,  80,  0,    0, "chaingun",        "chaing", 0 },
+     { S_RLFIRE,    800, 120,   0, 320, 10, 1024,  1, 160, 40,    0, "rocketlauncher",  "rocket", 0 },
+     { S_RIFLE,    1500, 100,   0,   0, 30, 2048,  1,  80,  0,    0, "rifle",           "rifle",  0 },
+-    { S_FLAUNCH,   600,  90,   0, 200, 10, 1024,  1, 250, 45, 1500, "grenadelauncher", "gl",     0 },
++    { S_FLAUNCH,   500,  90,   0, 200, 10, 1024,  1, 250, 45, 1500, "grenadelauncher", "gl",     0 }, // Grenade Launcher Damage Tuning --jr
+     { S_PISTOL,    500,  35,  50,   0,  7, 1024,  1,  80,  0,    0, "pistol",          "pistol", 0 },
+     { S_FLAUNCH,   200,  20,   0, 200,  1, 1024,  1,  80, 40,    0, "fireball",        NULL,     PART_FIREBALL1 },
+     { S_ICEBALL,   200,  40,   0, 120,  1, 1024,  1,  80, 40,    0, "iceball",         NULL,     PART_FIREBALL2 },
+@@ -366,13 +369,14 @@ static const struct guninfo { int sound,
+ struct fpsstate
+ {
+     int health, maxhealth;
++    int handicap; // HandicapMode --jr
+     int armour, armourtype;
+     int quadmillis;
+     int gunselect, gunwait;
+     int ammo[NUMGUNS];
+     int aitype, skill;
+ 
+-    fpsstate() : maxhealth(100), aitype(AI_NONE), skill(0) {}
++    fpsstate() : maxhealth(100), handicap(100), aitype(AI_NONE), skill(0) {} // HandicapMode --jr
+ 
+     void baseammo(int gun, int k = 2, int scale = 1)
+     {
+@@ -398,11 +402,11 @@ struct fpsstate
+         switch(type)
+         {
+             case I_BOOST: return maxhealth<is.max;
+-            case I_HEALTH: return health<maxhealth;
++            case I_HEALTH: return health < maxhealth * handicap / 100; // HandicapMode --jr
+             case I_GREENARMOUR:
+                 // (100h/100g only absorbs 200 damage)
+                 if(armourtype==A_YELLOW && armour>=100) return false;
+-            case I_YELLOWARMOUR: return !armourtype || armour<is.max;
++            case I_YELLOWARMOUR: return !armourtype || armour<(is.max * handicap / 100); // HandicapMode --jr
+             case I_QUAD: return quadmillis<is.max;
+             default: return ammo[is.info]<is.max;
+         }
+@@ -417,11 +421,11 @@ struct fpsstate
+             case I_BOOST:
+                 maxhealth = min(maxhealth+is.add, is.max);
+             case I_HEALTH: // boost also adds to health
+-                health = min(health+is.add, maxhealth);
++                health = min(health+is.add, maxhealth * handicap / 100); // HandicapMode --jr
+                 break;
+             case I_GREENARMOUR:
+             case I_YELLOWARMOUR:
+-                armour = min(armour+is.add, is.max);
++                armour = min(armour+is.add, (is.max * handicap / 100)); // HandicapMode --jr
+                 armourtype = is.info;
+                 break;
+             case I_QUAD:
+@@ -503,6 +507,17 @@ struct fpsstate
+             ammo[GUN_PISTOL] = 80;
+             ammo[GUN_GL] = 1;
+         }
++        // BEGIN m_handicap
++        else if(m_handicap)
++        {
++            armourtype = A_BLUE;
++            armour = 25;
++            health = health * handicap / 100;
++            armour = armour * handicap / 100;
++            ammo[GUN_PISTOL] = 40;
++            ammo[GUN_GL] = 1;
++        }
++        // END m_handicap
+         else
+         {
+             armourtype = A_BLUE;
+diff -rupN sauerbraten/src/fpsgame/server.cpp sauerbraten_cip/src/fpsgame/server.cpp
+--- sauerbraten/src/fpsgame/server.cpp	2013-02-03 02:03:08.000000000 +0100
++++ sauerbraten_cip/src/fpsgame/server.cpp	2013-12-23 20:59:36.232800483 +0100
+@@ -2118,6 +2118,21 @@ namespace server
+             target->state.deaths++;
+             int fragvalue = smode ? smode->fragvalue(target, actor) : (target==actor || isteam(target->team, actor->team) ? -1 : 1);
+             actor->state.frags += fragvalue;
++	    // BEGIN HandicapMode --jr
++	    if (m_handicap)
++	      {
++		int handicap_before = actor->state.handicap;
++		int min_frags = actor->state.frags;
++		loopv(clients) if(clients[i]->state.frags < min_frags) min_frags = clients[i]->state.frags;
++		target->state.handicap = (int)ceil(100.0 * exp(-0.1 * (double)(target->state.frags - min_frags)));
++		actor->state.handicap = (int)ceil(100.0 * exp(-0.1 * (double)(actor->state.frags - min_frags)));
++		if (actor->state.handicap < handicap_before)
++		  {
++		    actor->state.health = actor->state.health * actor->state.handicap / handicap_before;
++		    actor->state.armour = actor->state.armour * actor->state.handicap / handicap_before;
++		  }
++	      }
++	    // END HandicapMode --jr
+             if(fragvalue>0)
+             {
+                 int friends = 0, enemies = 0; // note: friends also includes the fragger
+@@ -2127,7 +2142,7 @@ namespace server
+             }
+             teaminfo *t = m_teammode ? teaminfos.access(actor->team) : NULL;
+             if(t) t->frags += fragvalue; 
+-            sendf(-1, 1, "ri5", N_DIED, target->clientnum, actor->clientnum, actor->state.frags, t ? t->frags : 0);
++            sendf(-1, 1, "ri7", N_DIED, target->clientnum, actor->clientnum, actor->state.frags, t ? t->frags : 0, target->state.handicap, actor->state.handicap);  // HandicapMode --jr
+             target->position.setsize(0);
+             if(smode) smode->died(target, actor);
+             ts.state = CS_DEAD;
+@@ -2152,7 +2167,7 @@ namespace server
+         ci->state.deaths++;
+         teaminfo *t = m_teammode ? teaminfos.access(ci->team) : NULL;
+         if(t) t->frags += fragvalue;
+-        sendf(-1, 1, "ri5", N_DIED, ci->clientnum, ci->clientnum, gs.frags, t ? t->frags : 0);
++        sendf(-1, 1, "ri7", N_DIED, ci->clientnum, ci->clientnum, gs.frags, t ? t-> frags : 0, gs.handicap, gs.handicap); // HandicapMode --jr // Handicap should be updated here as well, ignored by now
+         ci->position.setsize(0);
+         if(smode) smode->died(ci, NULL);
+         gs.state = CS_DEAD;
+@@ -2194,6 +2209,7 @@ namespace server
+ 
+             int damage = guns[gun].damage;
+             if(gs.quadmillis) damage *= 4;
++            damage = damage * gs.handicap / 100; // HandicapMode --jr
+             damage = int(damage*(1-h.dist/EXP_DISTSCALE/guns[gun].exprad));
+             if(target==ci) damage /= EXP_SELFDAMDIV;
+             dodamage(target, ci, damage, gun, h.dir);
+@@ -2216,7 +2232,7 @@ namespace server
+                 int(from.x*DMF), int(from.y*DMF), int(from.z*DMF),
+                 int(to.x*DMF), int(to.y*DMF), int(to.z*DMF),
+                 ci->ownernum);
+-        gs.shotdamage += guns[gun].damage*(gs.quadmillis ? 4 : 1)*guns[gun].rays;
++        gs.shotdamage += guns[gun].damage*(gs.quadmillis ? 4 : 1)*guns[gun].rays * gs.handicap / 100; // HandicapMode --jr
+         switch(gun)
+         {
+             case GUN_RL: gs.rockets.add(id); break;
+@@ -2234,6 +2250,7 @@ namespace server
+                     if(totalrays>maxrays) continue;
+                     int damage = h.rays*guns[gun].damage;
+                     if(gs.quadmillis) damage *= 4;
++		    damage = damage * gs.handicap / 100 // HandicapMode --jr
+                     dodamage(target, ci, damage, gun, h.dir);
+                 }
+                 break;
+@@ -2737,6 +2754,20 @@ namespace server
+ 
+         sendwelcome(ci);
+         if(restorescore(ci)) sendresume(ci);
++	// BEGIN HandicapMode --jr
++	// Set initial frags to minfrags for new joiners
++	// Otherwise balance is destroyed when new people join
++	if(m_handicap)
++	  {
++	    int min_frags = INT_MAX; // at least someone should have fewer frags...
++	    if (clients.length() > 1)
++	      {
++		loopv(clients) if(clients[i]->clientnum != ci->clientnum && clients[i]->state.frags < min_frags) min_frags = clients[i]->state.frags;
++		if (ci->state.frags < min_frags) ci->state.frags = min_frags;
++		sendresume(ci);
++	      }
++	  }
++	// END HandicapMode --jr
+         sendinitclient(ci);
+ 
+         aiman::addclient(ci);
+@@ -3526,7 +3557,7 @@ namespace server
+     int laninfoport() { return SAUERBRATEN_LANINFO_PORT; }
+     int serverinfoport(int servport) { return servport < 0 ? SAUERBRATEN_SERVINFO_PORT : servport+1; }
+     int serverport(int infoport) { return infoport < 0 ? SAUERBRATEN_SERVER_PORT : infoport-1; }
+-    const char *defaultmaster() { return "sauerbraten.org"; }
++    const char *defaultmaster() { return "bratvirshtl.physik.uni-erlangen.de"; } // HandicapMode --jr
+     int masterport() { return SAUERBRATEN_MASTER_PORT; }
+     int numchannels() { return 3; }
+ 
+diff -rupN sauerbraten/src/fpsgame/weapon.cpp sauerbraten_cip/src/fpsgame/weapon.cpp
+--- sauerbraten/src/fpsgame/weapon.cpp	2012-12-29 20:31:15.000000000 +0100
++++ sauerbraten_cip/src/fpsgame/weapon.cpp	2013-12-23 21:02:27.191793488 +0100
+@@ -234,7 +234,7 @@ namespace game
+             {
+                 if(bnc.bouncetype==BNC_GRENADE)
+                 {
+-                    int qdam = guns[GUN_GL].damage*(bnc.owner->quadmillis ? 4 : 1);
++		    int qdam = guns[GUN_GL].damage*(bnc.owner->quadmillis ? 4 : 1) * bnc.owner->handicap / 100; // HandicapMode --jr
+                     hits.setsize(0);
+                     explode(bnc.local, bnc.owner, bnc.o, NULL, qdam, GUN_GL);
+                     adddecal(DECAL_SCORCH, bnc.o, vec(0, 0, 1), guns[GUN_GL].exprad/2);
+@@ -500,7 +500,7 @@ namespace game
+         {
+             projectile &p = projs[i];
+             p.offsetmillis = max(p.offsetmillis-time, 0);
+-            int qdam = guns[p.gun].damage*(p.owner->quadmillis ? 4 : 1);
++            int qdam = guns[p.gun].damage*(p.owner->quadmillis ? 4 : 1) * p.owner->handicap / 100; // HandicapMode --jr
+             if(p.owner->type==ENT_AI) qdam /= MONSTERDAMAGEFACTOR;
+             vec v;
+             float dist = p.to.dist(p.o, v);
+@@ -712,6 +712,7 @@ namespace game
+     {
+         int qdam = guns[d->gunselect].damage;
+         if(d->quadmillis) qdam *= 4;
++        qdam = qdam * d->handicap / 100; // HandicapMode --jr
+         if(d->type==ENT_AI) qdam /= MONSTERDAMAGEFACTOR;
+         dynent *o;
+         float dist;
+@@ -801,7 +802,7 @@ namespace game
+ 
+ 		d->gunwait = guns[d->gunselect].attackdelay;
+ 		if(d->gunselect == GUN_PISTOL && d->ai) d->gunwait += int(d->gunwait*(((101-d->skill)+rnd(111-d->skill))/100.f));
+-        d->totalshots += guns[d->gunselect].damage*(d->quadmillis ? 4 : 1)*guns[d->gunselect].rays;
++	d->totalshots += guns[d->gunselect].damage*(d->quadmillis ? 4 : 1)*guns[d->gunselect].rays * d->handicap / 100; // HandicapMode --jr
+     }
+ 
+     void adddynlights()

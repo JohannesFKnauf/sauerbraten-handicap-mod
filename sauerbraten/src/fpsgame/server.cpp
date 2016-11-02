@@ -624,6 +624,7 @@ namespace server
 		}
 	});
     SVAR(servermotd, "");
+    FVAR(handicapmultiplier, 0.001f, 0.1f, 10.0f);
 
     struct teamkillkick
     {
@@ -2124,8 +2125,8 @@ namespace server
 		int handicap_before = actor->state.handicap;
 		int min_frags = actor->state.frags;
 		loopv(clients) if(clients[i]->state.frags < min_frags) min_frags = clients[i]->state.frags;
-		target->state.handicap = (int)ceil(100.0 * exp(-0.1 * (double)(target->state.frags - min_frags)));
-		actor->state.handicap = (int)ceil(100.0 * exp(-0.1 * (double)(actor->state.frags - min_frags)));
+		target->state.handicap = (int)ceil(100.0 * exp(-handicapmultiplier * (double)(target->state.frags - min_frags)));
+		actor->state.handicap = (int)ceil(100.0 * exp(-handicapmultiplier * (double)(actor->state.frags - min_frags)));
 		if (actor->state.handicap < handicap_before)
 		  {
 		    actor->state.health = actor->state.health * actor->state.handicap / handicap_before;

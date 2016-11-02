@@ -1454,7 +1454,7 @@ namespace game
 
             case N_DIED:
             {
-		int vcn = getint(p), acn = getint(p), frags = getint(p), tfrags = getint(p), handicap_v = getint(p), handicap_a = getint(p); // HandicapMode --jr
+                int vcn = getint(p), acn = getint(p), frags = getint(p), tfrags = getint(p), handicap_v = getint(p), handicap_a = getint(p); // HandicapMode --jr
                 fpsent *victim = getclient(vcn),
                        *actor = getclient(acn);
                 if(!actor) break;

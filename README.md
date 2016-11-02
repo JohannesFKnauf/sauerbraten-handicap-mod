@@ -69,7 +69,4 @@ In order to play the mod, you have to compile sauerbraten from source after appl
 
 ## Applying the patch
 
-The patch contains changes in data/ and src/fpsgame/
-
-    cd sauerbraten
-    patch -p1 < handicap_mod.diff
+Just copy the contained sauerbraten/ folder over the original one and replace all files.

@@ -537,6 +537,7 @@ namespace game
     ICOMMANDS("m_demo", "i", (int *mode), { int gamemode = *mode; intret(m_demo); });
     ICOMMANDS("m_edit", "i", (int *mode), { int gamemode = *mode; intret(m_edit); });
     ICOMMANDS("m_lobby", "i", (int *mode), { int gamemode = *mode; intret(m_lobby); });
+    ICOMMANDS("m_handicap", "i", (int *mode), { int gamemode = *mode; intret(m_handicap); }); // HandicapMode --jr
     ICOMMANDS("m_sp", "i", (int *mode), { int gamemode = *mode; intret(m_sp); });
     ICOMMANDS("m_dmsp", "i", (int *mode), { int gamemode = *mode; intret(m_dmsp); });
     ICOMMANDS("m_classicsp", "i", (int *mode), { int gamemode = *mode; intret(m_classicsp); });
@@ -1453,11 +1454,20 @@ namespace game
 
             case N_DIED:
             {
-                int vcn = getint(p), acn = getint(p), frags = getint(p), tfrags = getint(p);
+		int vcn = getint(p), acn = getint(p), frags = getint(p), tfrags = getint(p), handicap_v = getint(p), handicap_a = getint(p); // HandicapMode --jr
                 fpsent *victim = getclient(vcn),
                        *actor = getclient(acn);
                 if(!actor) break;
                 actor->frags = frags;
+		// BEGIN HandicapMode --jr
+		int handicap_before = actor->handicap;
+		actor->handicap = handicap_a;
+		if (actor->handicap < handicap_before)
+		  {
+		    actor->health = actor->health * actor->handicap / handicap_before;
+		    actor->armour = actor->armour * actor->handicap / handicap_before;
+		  }
+		// END HandicapMode --jr
                 if(m_teammode) setteaminfo(actor->team, tfrags);
                 if(actor!=player1 && (!cmode || !cmode->hidefrags()))
                 {
@@ -1465,6 +1475,7 @@ namespace game
                     particle_textcopy(actor->abovehead(), ds, PART_TEXT, 2000, 0x32FF64, 4.0f, -8);
                 }
                 if(!victim) break;
+		victim->handicap = handicap_v; // HandicapMode --jr
                 killed(victim, actor);
                 break;
             }

@@ -2118,6 +2118,21 @@ namespace server
             target->state.deaths++;
             int fragvalue = smode ? smode->fragvalue(target, actor) : (target==actor || isteam(target->team, actor->team) ? -1 : 1);
             actor->state.frags += fragvalue;
+	    // BEGIN HandicapMode --jr
+	    if (m_handicap)
+	      {
+		int handicap_before = actor->state.handicap;
+		int min_frags = actor->state.frags;
+		loopv(clients) if(clients[i]->state.frags < min_frags) min_frags = clients[i]->state.frags;
+		target->state.handicap = (int)ceil(100.0 * exp(-0.1 * (double)(target->state.frags - min_frags)));
+		actor->state.handicap = (int)ceil(100.0 * exp(-0.1 * (double)(actor->state.frags - min_frags)));
+		if (actor->state.handicap < handicap_before)
+		  {
+		    actor->state.health = actor->state.health * actor->state.handicap / handicap_before;
+		    actor->state.armour = actor->state.armour * actor->state.handicap / handicap_before;
+		  }
+	      }
+	    // END HandicapMode --jr
             if(fragvalue>0)
             {
                 int friends = 0, enemies = 0; // note: friends also includes the fragger
@@ -2127,7 +2142,7 @@ namespace server
             }
             teaminfo *t = m_teammode ? teaminfos.access(actor->team) : NULL;
             if(t) t->frags += fragvalue; 
-            sendf(-1, 1, "ri5", N_DIED, target->clientnum, actor->clientnum, actor->state.frags, t ? t->frags : 0);
+            sendf(-1, 1, "ri7", N_DIED, target->clientnum, actor->clientnum, actor->state.frags, t ? t->frags : 0, target->state.handicap, actor->state.handicap);  // HandicapMode --jr
             target->position.setsize(0);
             if(smode) smode->died(target, actor);
             ts.state = CS_DEAD;
@@ -2152,7 +2167,7 @@ namespace server
         ci->state.deaths++;
         teaminfo *t = m_teammode ? teaminfos.access(ci->team) : NULL;
         if(t) t->frags += fragvalue;
-        sendf(-1, 1, "ri5", N_DIED, ci->clientnum, ci->clientnum, gs.frags, t ? t->frags : 0);
+        sendf(-1, 1, "ri7", N_DIED, ci->clientnum, ci->clientnum, gs.frags, t ? t-> frags : 0, gs.handicap, gs.handicap); // HandicapMode --jr // Handicap should be updated here as well, ignored by now
         ci->position.setsize(0);
         if(smode) smode->died(ci, NULL);
         gs.state = CS_DEAD;
@@ -2194,6 +2209,7 @@ namespace server
 
             int damage = guns[gun].damage;
             if(gs.quadmillis) damage *= 4;
+            damage = damage * gs.handicap / 100; // HandicapMode --jr
             damage = int(damage*(1-h.dist/EXP_DISTSCALE/guns[gun].exprad));
             if(target==ci) damage /= EXP_SELFDAMDIV;
             dodamage(target, ci, damage, gun, h.dir);
@@ -2216,7 +2232,7 @@ namespace server
                 int(from.x*DMF), int(from.y*DMF), int(from.z*DMF),
                 int(to.x*DMF), int(to.y*DMF), int(to.z*DMF),
                 ci->ownernum);
-        gs.shotdamage += guns[gun].damage*(gs.quadmillis ? 4 : 1)*guns[gun].rays;
+        gs.shotdamage += guns[gun].damage*(gs.quadmillis ? 4 : 1)*guns[gun].rays * gs.handicap / 100; // HandicapMode --jr
         switch(gun)
         {
             case GUN_RL: gs.rockets.add(id); break;
@@ -2234,6 +2250,7 @@ namespace server
                     if(totalrays>maxrays) continue;
                     int damage = h.rays*guns[gun].damage;
                     if(gs.quadmillis) damage *= 4;
+		    damage = damage * gs.handicap / 100; // HandicapMode --jr
                     dodamage(target, ci, damage, gun, h.dir);
                 }
                 break;
@@ -2737,6 +2754,20 @@ namespace server
 
         sendwelcome(ci);
         if(restorescore(ci)) sendresume(ci);
+	// BEGIN HandicapMode --jr
+	// Set initial frags to minfrags for new joiners
+	// Otherwise balance is destroyed when new people join
+	if(m_handicap)
+	  {
+	    int min_frags = INT_MAX; // at least someone should have fewer frags...
+	    if (clients.length() > 1)
+	      {
+		loopv(clients) if(clients[i]->clientnum != ci->clientnum && clients[i]->state.frags < min_frags) min_frags = clients[i]->state.frags;
+		if (ci->state.frags < min_frags) ci->state.frags = min_frags;
+		sendresume(ci);
+	      }
+	  }
+	// END HandicapMode --jr
         sendinitclient(ci);
 
         aiman::addclient(ci);
@@ -3526,7 +3557,7 @@ namespace server
     int laninfoport() { return SAUERBRATEN_LANINFO_PORT; }
     int serverinfoport(int servport) { return servport < 0 ? SAUERBRATEN_SERVINFO_PORT : servport+1; }
     int serverport(int infoport) { return infoport < 0 ? SAUERBRATEN_SERVER_PORT : infoport-1; }
-    const char *defaultmaster() { return "sauerbraten.org"; }
+    const char *defaultmaster() { return "bratvirshtl.physik.uni-erlangen.de"; } // HandicapMode --jr
     int masterport() { return SAUERBRATEN_MASTER_PORT; }
     int numchannels() { return 3; }
 

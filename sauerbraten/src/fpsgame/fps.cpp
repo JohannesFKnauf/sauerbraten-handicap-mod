@@ -429,8 +429,8 @@ namespace game
         }
         else
         {
-            if(d==player1) conoutf(contype, "\f2%s got fragged by %s", dname, aname);
-            else conoutf(contype, "\f2%s fragged %s", aname, dname);
+	    if(d==player1) conoutf(contype, "\f2%s got fragged by %s with %s", dname, aname, guns[actor->gunselect].name); // HandicapMode --jr
+	    else conoutf(contype, "\f2%s fragged %s with %s", aname, dname, guns[actor->gunselect].name); // HandicapMode --jr
         }
         deathstate(d);
 		ai::killed(d, actor);

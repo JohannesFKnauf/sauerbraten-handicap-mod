@@ -90,7 +90,8 @@ enum
     M_DMSP       = 1<<16,
     M_CLASSICSP  = 1<<17,
     M_SLOWMO     = 1<<18,
-    M_COLLECT    = 1<<19
+    M_COLLECT    = 1<<19,
+    M_HANDICAP   = 1<<20 // HandicapMode --jr
 };
 
 static struct gamemodeinfo
@@ -104,6 +105,7 @@ static struct gamemodeinfo
     { "DMSP", M_LOCAL | M_DMSP, NULL },
     { "demo", M_DEMO | M_LOCAL, NULL},
     { "ffa", M_LOBBY, "Free For All: Collect items for ammo. Frag everyone to score points." },
+    { "handicap", M_HANDICAP, "Handicap: Frag everyone to increase your handicap. Handicap corresponds to frag differences between players. Health, armor, damage are reduced by current handicap." }, // HandicapMode --jr
     { "coop edit", M_EDIT, "Cooperative Editing: Edit maps with multiple players simultaneously." },
     { "teamplay", M_TEAM, "Teamplay: Collect items for ammo. Frag \fs\f3the enemy team\fr to score points for \fs\f1your team\fr." },
     { "instagib", M_NOITEMS | M_INSTA, "Instagib: You spawn with full rifle ammo and die instantly from one shot. There are no items. Frag everyone to score points." },
@@ -138,6 +140,7 @@ static struct gamemodeinfo
 
 #define m_noitems      (m_check(gamemode, M_NOITEMS))
 #define m_noammo       (m_check(gamemode, M_NOAMMO|M_NOITEMS))
+#define m_handicap     (m_check(gamemode, M_HANDICAP)) // HandicapMode --jr
 #define m_insta        (m_check(gamemode, M_INSTA))
 #define m_tactics      (m_check(gamemode, M_TACTICS))
 #define m_efficiency   (m_check(gamemode, M_EFFICIENCY))
@@ -279,7 +282,7 @@ static const int msgsizes[] =               // size inclusive message token, 0 f
 #define SAUERBRATEN_SERVER_PORT 28785
 #define SAUERBRATEN_SERVINFO_PORT 28786
 #define SAUERBRATEN_MASTER_PORT 28787
-#define PROTOCOL_VERSION 259            // bump when protocol changes
+#define PROTOCOL_VERSION 532            // bump when protocol changes // HandicapMode --jr, symbolic high value to force incompatibility
 #define DEMO_VERSION 1                  // bump when demo format changes
 #define DEMO_MAGIC "SAUERBRATEN_DEMO"
 
@@ -346,12 +349,12 @@ static struct itemstat { int add, max, sound; const char *name; int icon, info; 
 
 static const struct guninfo { int sound, attackdelay, damage, spread, projspeed, kickamount, range, rays, hitpush, exprad, ttl; const char *name, *file; short part; } guns[NUMGUNS] =
 {
-    { S_PUNCH1,    250,  50,   0,   0,  0,   14,  1,  80,  0,    0, "fist",            "fist",   0 },
+    { S_PUNCH1,    250, 100,   0,   0,  0,   14,  1,  80,  0,    0, "fist",            "fist",   0 }, // Fist Damage Tuning --jr
     { S_SG,       1400,  10, 400,   0, 20, 1024, 20,  80,  0,    0, "shotgun",         "shotg",  0 },
     { S_CG,        100,  30, 100,   0,  7, 1024,  1,  80,  0,    0, "chaingun",        "chaing", 0 },
     { S_RLFIRE,    800, 120,   0, 320, 10, 1024,  1, 160, 40,    0, "rocketlauncher",  "rocket", 0 },
     { S_RIFLE,    1500, 100,   0,   0, 30, 2048,  1,  80,  0,    0, "rifle",           "rifle",  0 },
-    { S_FLAUNCH,   600,  90,   0, 200, 10, 1024,  1, 250, 45, 1500, "grenadelauncher", "gl",     0 },
+    { S_FLAUNCH,   500,  90,   0, 200, 10, 1024,  1, 250, 45, 1500, "grenadelauncher", "gl",     0 }, // Grenade Launcher Damage Tuning --jr
     { S_PISTOL,    500,  35,  50,   0,  7, 1024,  1,  80,  0,    0, "pistol",          "pistol", 0 },
     { S_FLAUNCH,   200,  20,   0, 200,  1, 1024,  1,  80, 40,    0, "fireball",        NULL,     PART_FIREBALL1 },
     { S_ICEBALL,   200,  40,   0, 120,  1, 1024,  1,  80, 40,    0, "iceball",         NULL,     PART_FIREBALL2 },
@@ -366,13 +369,14 @@ static const struct guninfo { int sound, attackdelay, damage, spread, projspeed,
 struct fpsstate
 {
     int health, maxhealth;
+    int handicap; // HandicapMode --jr
     int armour, armourtype;
     int quadmillis;
     int gunselect, gunwait;
     int ammo[NUMGUNS];
     int aitype, skill;
 
-    fpsstate() : maxhealth(100), aitype(AI_NONE), skill(0) {}
+    fpsstate() : maxhealth(100), handicap(100), aitype(AI_NONE), skill(0) {} // HandicapMode --jr
 
     void baseammo(int gun, int k = 2, int scale = 1)
     {
@@ -398,11 +402,11 @@ struct fpsstate
         switch(type)
         {
             case I_BOOST: return maxhealth<is.max;
-            case I_HEALTH: return health<maxhealth;
+            case I_HEALTH: return health < maxhealth * handicap / 100; // HandicapMode --jr
             case I_GREENARMOUR:
                 // (100h/100g only absorbs 200 damage)
                 if(armourtype==A_YELLOW && armour>=100) return false;
-            case I_YELLOWARMOUR: return !armourtype || armour<is.max;
+            case I_YELLOWARMOUR: return !armourtype || armour<(is.max * handicap / 100); // HandicapMode --jr
             case I_QUAD: return quadmillis<is.max;
             default: return ammo[is.info]<is.max;
         }
@@ -417,11 +421,11 @@ struct fpsstate
             case I_BOOST:
                 maxhealth = min(maxhealth+is.add, is.max);
             case I_HEALTH: // boost also adds to health
-                health = min(health+is.add, maxhealth);
+                health = min(health+is.add, maxhealth * handicap / 100); // HandicapMode --jr
                 break;
             case I_GREENARMOUR:
             case I_YELLOWARMOUR:
-                armour = min(armour+is.add, is.max);
+                armour = min(armour+is.add, (is.max * handicap / 100)); // HandicapMode --jr
                 armourtype = is.info;
                 break;
             case I_QUAD:
@@ -503,6 +507,17 @@ struct fpsstate
             ammo[GUN_PISTOL] = 80;
             ammo[GUN_GL] = 1;
         }
+        // BEGIN m_handicap
+        else if(m_handicap)
+        {
+            armourtype = A_BLUE;
+            armour = 25;
+            health = health * handicap / 100;
+            armour = armour * handicap / 100;
+            ammo[GUN_PISTOL] = 40;
+            ammo[GUN_GL] = 1;
+        }
+        // END m_handicap
         else
         {
             armourtype = A_BLUE;

@@ -234,7 +234,7 @@ namespace game
             {
                 if(bnc.bouncetype==BNC_GRENADE)
                 {
-                    int qdam = guns[GUN_GL].damage*(bnc.owner->quadmillis ? 4 : 1);
+		    int qdam = guns[GUN_GL].damage*(bnc.owner->quadmillis ? 4 : 1) * bnc.owner->handicap / 100; // HandicapMode --jr
                     hits.setsize(0);
                     explode(bnc.local, bnc.owner, bnc.o, NULL, qdam, GUN_GL);
                     adddecal(DECAL_SCORCH, bnc.o, vec(0, 0, 1), guns[GUN_GL].exprad/2);
@@ -500,7 +500,7 @@ namespace game
         {
             projectile &p = projs[i];
             p.offsetmillis = max(p.offsetmillis-time, 0);
-            int qdam = guns[p.gun].damage*(p.owner->quadmillis ? 4 : 1);
+            int qdam = guns[p.gun].damage*(p.owner->quadmillis ? 4 : 1) * p.owner->handicap / 100; // HandicapMode --jr
             if(p.owner->type==ENT_AI) qdam /= MONSTERDAMAGEFACTOR;
             vec v;
             float dist = p.to.dist(p.o, v);
@@ -712,6 +712,7 @@ namespace game
     {
         int qdam = guns[d->gunselect].damage;
         if(d->quadmillis) qdam *= 4;
+        qdam = qdam * d->handicap / 100; // HandicapMode --jr
         if(d->type==ENT_AI) qdam /= MONSTERDAMAGEFACTOR;
         dynent *o;
         float dist;
@@ -801,7 +802,7 @@ namespace game
 
 		d->gunwait = guns[d->gunselect].attackdelay;
 		if(d->gunselect == GUN_PISTOL && d->ai) d->gunwait += int(d->gunwait*(((101-d->skill)+rnd(111-d->skill))/100.f));
-        d->totalshots += guns[d->gunselect].damage*(d->quadmillis ? 4 : 1)*guns[d->gunselect].rays;
+	d->totalshots += guns[d->gunselect].damage*(d->quadmillis ? 4 : 1)*guns[d->gunselect].rays * d->handicap / 100; // HandicapMode --jr
     }
 
     void adddynlights()

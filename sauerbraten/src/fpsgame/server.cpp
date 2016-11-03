@@ -2168,7 +2168,21 @@ namespace server
         ci->state.deaths++;
         teaminfo *t = m_teammode ? teaminfos.access(ci->team) : NULL;
         if(t) t->frags += fragvalue;
-        sendf(-1, 1, "ri7", N_DIED, ci->clientnum, ci->clientnum, gs.frags, t ? t-> frags : 0, gs.handicap, gs.handicap); // HandicapMode --jr // Handicap should be updated here as well, ignored by now
+	// BEGIN HandicapMode --jr
+	if (m_handicap)
+	  {
+	    int handicap_before = ci->state.handicap;
+	    int min_frags = ci->state.frags;
+	    loopv(clients) if(clients[i]->state.frags < min_frags) min_frags = clients[i]->state.frags;
+	    ci->state.handicap = (int)ceil(100.0 * exp(-handicapmultiplier * (double)(ci->state.frags - min_frags)));
+	    if (ci->state.handicap < handicap_before)
+	      {
+		ci->state.health = ci->state.health * ci->state.handicap / handicap_before;
+		ci->state.armour = ci->state.armour * ci->state.handicap / handicap_before;
+	      }
+	  }
+	// END HandicapMode --jr
+        sendf(-1, 1, "ri7", N_DIED, ci->clientnum, ci->clientnum, gs.frags, t ? t-> frags : 0, gs.handicap, gs.handicap); // HandicapMode --jr 
         ci->position.setsize(0);
         if(smode) smode->died(ci, NULL);
         gs.state = CS_DEAD;

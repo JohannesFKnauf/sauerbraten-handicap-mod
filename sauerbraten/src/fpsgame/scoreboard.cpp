@@ -235,6 +235,15 @@ namespace game
                 g.poplist();
             }
 
+	    if(m_handicap)
+            { 
+                g.pushlist();
+                g.strut(5);
+                g.text("HC", fgcolor);
+                loopscoregroup(o, g.textf("%d", 0xFFFFDD, NULL, o->handicap));
+                g.poplist();
+            }
+
             g.pushlist();
             g.text("name", fgcolor);
             g.strut(13);

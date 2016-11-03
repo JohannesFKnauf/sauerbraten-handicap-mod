@@ -2119,7 +2119,6 @@ namespace server
             target->state.deaths++;
             int fragvalue = smode ? smode->fragvalue(target, actor) : (target==actor || isteam(target->team, actor->team) ? -1 : 1);
             actor->state.frags += fragvalue;
-	    // BEGIN HandicapMode --jr
 	    if (m_handicap)
 	      {
 		int handicap_before = actor->state.handicap;
@@ -2133,7 +2132,6 @@ namespace server
 		    actor->state.armour = actor->state.armour * actor->state.handicap / handicap_before;
 		  }
 	      }
-	    // END HandicapMode --jr
             if(fragvalue>0)
             {
                 int friends = 0, enemies = 0; // note: friends also includes the fragger
@@ -2143,7 +2141,7 @@ namespace server
             }
             teaminfo *t = m_teammode ? teaminfos.access(actor->team) : NULL;
             if(t) t->frags += fragvalue; 
-            sendf(-1, 1, "ri7", N_DIED, target->clientnum, actor->clientnum, actor->state.frags, t ? t->frags : 0, target->state.handicap, actor->state.handicap);  // HandicapMode --jr
+            sendf(-1, 1, "ri7", N_DIED, target->clientnum, actor->clientnum, actor->state.frags, t ? t->frags : 0, target->state.handicap, actor->state.handicap);
             target->position.setsize(0);
             if(smode) smode->died(target, actor);
             ts.state = CS_DEAD;
@@ -2168,7 +2166,6 @@ namespace server
         ci->state.deaths++;
         teaminfo *t = m_teammode ? teaminfos.access(ci->team) : NULL;
         if(t) t->frags += fragvalue;
-	// BEGIN HandicapMode --jr
 	if (m_handicap)
 	  {
 	    int handicap_before = ci->state.handicap;
@@ -2181,8 +2178,7 @@ namespace server
 		ci->state.armour = ci->state.armour * ci->state.handicap / handicap_before;
 	      }
 	  }
-	// END HandicapMode --jr
-        sendf(-1, 1, "ri7", N_DIED, ci->clientnum, ci->clientnum, gs.frags, t ? t-> frags : 0, gs.handicap, gs.handicap); // HandicapMode --jr 
+        sendf(-1, 1, "ri7", N_DIED, ci->clientnum, ci->clientnum, gs.frags, t ? t-> frags : 0, gs.handicap, gs.handicap);
         ci->position.setsize(0);
         if(smode) smode->died(ci, NULL);
         gs.state = CS_DEAD;
@@ -2224,7 +2220,7 @@ namespace server
 
             int damage = guns[gun].damage;
             if(gs.quadmillis) damage *= 4;
-            damage = damage * gs.handicap / 100; // HandicapMode --jr
+            damage = damage * gs.handicap / 100;
             damage = int(damage*(1-h.dist/EXP_DISTSCALE/guns[gun].exprad));
             if(target==ci) damage /= EXP_SELFDAMDIV;
             dodamage(target, ci, damage, gun, h.dir);
@@ -2247,7 +2243,7 @@ namespace server
                 int(from.x*DMF), int(from.y*DMF), int(from.z*DMF),
                 int(to.x*DMF), int(to.y*DMF), int(to.z*DMF),
                 ci->ownernum);
-        gs.shotdamage += guns[gun].damage*(gs.quadmillis ? 4 : 1)*guns[gun].rays * gs.handicap / 100; // HandicapMode --jr
+        gs.shotdamage += guns[gun].damage*(gs.quadmillis ? 4 : 1)*guns[gun].rays * gs.handicap / 100;
         switch(gun)
         {
             case GUN_RL: gs.rockets.add(id); break;
@@ -2265,7 +2261,7 @@ namespace server
                     if(totalrays>maxrays) continue;
                     int damage = h.rays*guns[gun].damage;
                     if(gs.quadmillis) damage *= 4;
-		    damage = damage * gs.handicap / 100; // HandicapMode --jr
+		    damage = damage * gs.handicap / 100;
                     dodamage(target, ci, damage, gun, h.dir);
                 }
                 break;
@@ -2769,7 +2765,6 @@ namespace server
 
         sendwelcome(ci);
         if(restorescore(ci)) sendresume(ci);
-	// BEGIN HandicapMode --jr
 	// Set initial frags to minfrags for new joiners
 	// Otherwise balance is destroyed when new people join
 	if(m_handicap)
@@ -2782,7 +2777,6 @@ namespace server
 		sendresume(ci);
 	      }
 	  }
-	// END HandicapMode --jr
         sendinitclient(ci);
 
         aiman::addclient(ci);
@@ -3572,7 +3566,7 @@ namespace server
     int laninfoport() { return SAUERBRATEN_LANINFO_PORT; }
     int serverinfoport(int servport) { return servport < 0 ? SAUERBRATEN_SERVINFO_PORT : servport+1; }
     int serverport(int infoport) { return infoport < 0 ? SAUERBRATEN_SERVER_PORT : infoport-1; }
-    const char *defaultmaster() { return "bratvirshtl.physik.uni-erlangen.de"; } // HandicapMode --jr
+    const char *defaultmaster() { return "bratvirshtl.physik.uni-erlangen.de"; }
     int masterport() { return SAUERBRATEN_MASTER_PORT; }
     int numchannels() { return 3; }
 

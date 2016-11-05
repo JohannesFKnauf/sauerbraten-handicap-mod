@@ -9,9 +9,17 @@ The mod ensures the same rate of fragging for every player without changing resu
 ** Also exposed in the GUI
 * Button 'lanconnect' readded to GUI
 * Weapons used for a frag are shown in messages
+* sauerbraten-handicap-mod does not change the gameplay of all classic Sauerbraten games
 * Mod is incompatible with original Sauerbraten in order to avoid problems
 * Punch weapon damage is upgraded by a factor of 2 to encourage melee duels
 * Grenade launcher damage is reduced slightly to improve weapon balance
+
+# Installing sauerbraten-handicap-mod and getting started
+
+* Download and install [vanilla sauerbraten collect edition](http://sauerbraten.org/) for your platform 
+* Download [a sauerbraten-handicap-mod binary release](https://github.com/JFKnaufAncud/sauerbraten-handicap-mod/releases) for your platform 
+* Unpack the zip file into a vanilla sauerbraten installation
+* Start playing handicap mod!
 
 # Game mode handicap
 
@@ -36,7 +44,7 @@ Whenever a player is killed, handicaps are readjusted. The current Handicap of a
 *** A frag margin of 20 to the weakest player translates to a handicap ratio e**2 = 7.389..., that is a handicap of 13.53....
 * New joiners start with a score of min_frags. Otherwise the balance would be destroyed immediately.
 
-# Build and Run plain Sauerbraten
+# Build and Run vanilla Sauerbraten
 In order to play the mod, you have to compile sauerbraten from source after applying the provided patch.
 
 ## Linux
@@ -67,6 +75,6 @@ In order to play the mod, you have to compile sauerbraten from source after appl
 * Build → Build
 
 
-## Applying the patch
+# Applying sauerbraten-handicap-mod patch
 
-Just copy the contained sauerbraten/ folder over the original one and replace all files.
+Just copy the contained sauerbraten/ folder over the original one and replace all files. Compile as described.
